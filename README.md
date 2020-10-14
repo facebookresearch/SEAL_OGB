@@ -51,7 +51,7 @@ Because this dataset uses mean reciprocal rank (MRR) as the metric where each po
 License
 -------
 
-SEAL_\OGB is released under an MIT license. Find out more about it [here](https://github.com/facebookresearch/SEAL_OGB/blob/master/LICENSE).
+SEAL\_OGB is released under an MIT license. Find out more about it [here](https://github.com/facebookresearch/SEAL_OGB/blob/master/LICENSE).
 
 Reference
 ---------
