@@ -9,7 +9,8 @@ This repository implements SEAL with the PyTorch-Geometric library, and tests SE
 
 |              | ogbl-ppa (Hits@100) | ogbl-collab (Hits@50) | ogbl-ddi (Hits@20) | ogbl-citation (MRR) |
 |--------------|---------------------|-----------------------|--------------------|---------------------|
-| Test results |  48.80%$$\pm$$3.16%* |    53.71%$$\pm$$0.47%* | 30.56%$$\pm$$3.86% |   85.27%$$\pm$$0.91%* |
+| Test results |  48.80%&plusmn;3.16%* |    53.71%&plusmn;0.47%* | 30.56%&plusmn;3.86% |   85.27%&plusmn;0.91%* |
+
 \* State-of-the-art results
 
 The original implementation of SEAL is [here](https://github.com/muhanzhang/SEAL).
