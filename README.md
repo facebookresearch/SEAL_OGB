@@ -7,6 +7,11 @@ SEAL is a GNN-based link prediction method. It first extracts a k-hop enclosing 
 
 This repository implements SEAL with the PyTorch-Geometric library, and tests SEAL in the Open Graph Benchmark (OGB) datasets. SEAL ranked 1st place on 3 out of 4 link prediction datasets in the [OGB Leaderboard](https://ogb.stanford.edu/docs/leader_linkprop/).
 
+|              | ogbl-ppa (Hits@100) | ogbl-collab (Hits@50) | ogbl-ddi (Hits@20) | ogbl-citation (MRR) |
+|--------------|---------------------|-----------------------|--------------------|---------------------|
+| Test results |  48.80%$$\pm$$3.16%* |    53.71%$$\pm$$0.47%* | 30.56%$$\pm$$3.86% |   85.27%$$\pm$$0.91%* |
+\* State-of-the-art results
+
 The original implementation of SEAL is [here](https://github.com/muhanzhang/SEAL).
 
 The original paper of SEAL is:
