@@ -15,6 +15,7 @@ from tqdm import tqdm
 import pdb
 
 import numpy as np
+from sklearn.metrics import roc_auc_score
 import scipy.sparse as ssp
 import torch
 import torch.nn.functional as F
@@ -39,6 +40,25 @@ from scipy.sparse import SparseEfficiencyWarning
 warnings.simplefilter('ignore',SparseEfficiencyWarning)
 
 from utils import *
+
+
+def do_edge_split(dataset):
+    data = dataset[0]
+    data = train_test_split_edges(data)
+
+    edge_index, _ = add_self_loops(data.train_pos_edge_index)
+    data.train_neg_edge_index = negative_sampling(
+        edge_index, num_nodes=data.num_nodes,
+        num_neg_samples=data.train_pos_edge_index.size(1))
+
+    split_edge = {'train': {}, 'valid': {}, 'test': {}}
+    split_edge['train']['edge'] = data.train_pos_edge_index.t()
+    split_edge['train']['edge_neg'] = data.train_neg_edge_index.t()
+    split_edge['valid']['edge'] = data.val_pos_edge_index.t()
+    split_edge['valid']['edge_neg'] = data.val_neg_edge_index.t()
+    split_edge['test']['edge'] = data.test_pos_edge_index.t()
+    split_edge['test']['edge_neg'] = data.test_neg_edge_index.t()
+    return split_edge
 
 def get_pos_neg_edges(split, split_edge, edge_index, num_nodes, percent=100):
     if 'edge' in split_edge['train']:
@@ -379,6 +399,8 @@ def test():
         results = evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'mrr':
         results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
+    elif args.eval_metric == 'auc':
+        results = evaluate_auc(val_pred, val_true, test_pred, test_true)
 
     return results
 
@@ -426,6 +448,9 @@ def test_multiple_models(models):
         elif args.eval_metric == 'mrr':
             Results.append(evaluate_mrr(pos_val_pred[i], neg_val_pred[i], 
                                         pos_test_pred[i], neg_test_pred[i]))
+        elif args.eval_metric == 'auc':
+            Results.append(evaluate_auc(val_pred[i], val_true[i], 
+                                        test_pred[i], test_pred[i]))
     return Results
 
 
@@ -465,6 +490,15 @@ def evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
     
     return results
 
+
+def evaluate_auc(val_pred, val_true, test_pred, test_true):
+    valid_auc = roc_auc_score(val_true, val_pred)
+    test_auc = roc_auc_score(test_true, test_pred)
+    results = {}
+    results['AUC'] = (valid_auc, test_auc)
+
+    return results
+        
 
 # Data settings
 parser = argparse.ArgumentParser(description='OGBL (SEAL)')
@@ -545,16 +579,24 @@ print('Command line input: ' + cmd_input + ' is saved.')
 with open(log_file, 'a') as f:
     f.write('\n' + cmd_input)
 
-dataset = PygLinkPropPredDataset(name=args.dataset)
+if args.dataset.startswith('ogbl'):
+    dataset = PygLinkPropPredDataset(name=args.dataset)
+    split_edge = dataset.get_edge_split()
+else:
+    path = osp.join('dataset', args.dataset)
+    dataset = Planetoid(path, args.dataset)
+    split_edge = do_edge_split(dataset)
 data = dataset[0]
-split_edge = dataset.get_edge_split()
 
 if args.dataset == 'ogbl-citation':
     args.eval_metric = 'mrr'
-else:
+elif args.dataset.startswith('ogbl'):
     args.eval_metric = 'hits'
+else:
+    args.eval_metric = 'auc'
 
-evaluator = Evaluator(name=args.dataset)
+if args.dataset.startswith('ogbl'):
+    evaluator = Evaluator(name=args.dataset)
 if args.eval_metric == 'hits':
     loggers = {
         'Hits@20': Logger(args.runs, args),
@@ -565,6 +607,11 @@ elif args.eval_metric == 'mrr':
     loggers = {
         'MRR': Logger(args.runs, args),
     }
+elif args.eval_metric == 'auc':
+    loggers = {
+        'AUC': Logger(args.runs, args),
+    }
+    
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 if args.use_heuristic:
@@ -593,6 +640,8 @@ if args.use_heuristic:
         results = evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'mrr':
         results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
+    elif args.eval_metric == 'auc':
+        results = evaluate_auc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
 
     for key, result in results.items():
         loggers[key].add_result(0, result)
