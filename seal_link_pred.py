@@ -641,7 +641,13 @@ if args.use_heuristic:
     elif args.eval_metric == 'mrr':
         results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'auc':
-        results = evaluate_auc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
+        val_pred = torch.cat([pos_val_pred, neg_val_pred])
+        val_true = torch.cat([torch.ones(pos_val_pred.size(0), dtype=int), 
+                              torch.zeros(neg_val_pred.size(0), dtype=int)])
+        test_pred = torch.cat([pos_test_pred, neg_test_pred])
+        test_true = torch.cat([torch.ones(pos_test_pred.size(0), dtype=int), 
+                              torch.zeros(neg_test_pred.size(0), dtype=int)])
+        results = evaluate_auc(val_pred, val_true, test_pred, test_true)
 
     for key, result in results.items():
         loggers[key].add_result(0, result)
