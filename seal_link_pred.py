@@ -269,6 +269,7 @@ class SAGE(torch.nn.Module):
         return x
 
 
+# An end-to-end deep learning architecture for graph classification, AAAI-18.
 class DGCNN(torch.nn.Module):
     def __init__(self, hidden_channels, num_layers, max_z, GNN=GCNConv, k=0.6, 
                  use_feature=False, node_embedding=None):
@@ -277,12 +278,12 @@ class DGCNN(torch.nn.Module):
         self.use_feature = use_feature
         self.node_embedding = node_embedding
 
-        if k < 1:  # Transform percentile to number.
+        if k <= 1:  # Transform percentile to number.
             if args.dynamic_train:
                 sampled_train = train_dataset[:1000]
             else:
                 sampled_train = train_dataset
-            num_nodes = sorted([data.num_nodes for data in sampled_train])
+            num_nodes = sorted([g.num_nodes for g in sampled_train])
             k = num_nodes[int(math.ceil(k * len(num_nodes))) - 1]
             k = max(10, k)
         self.k = int(k)
@@ -523,7 +524,7 @@ parser.add_argument('--use_edge_weight', action='store_true',
 parser.add_argument('--lr', type=float, default=0.0001)
 parser.add_argument('--epochs', type=int, default=50)
 parser.add_argument('--runs', type=int, default=1)
-parser.add_argument('--train_percent', type=float, default=10)
+parser.add_argument('--train_percent', type=float, default=100)
 parser.add_argument('--val_percent', type=float, default=100)
 parser.add_argument('--test_percent', type=float, default=100)
 parser.add_argument('--dynamic_train', action='store_true', 
@@ -536,6 +537,7 @@ parser.add_argument('--train_node_embedding', action='store_true',
 parser.add_argument('--pretrained_node_embedding', type=str, default=None, 
                     help="load pretrained node embeddings as additional node features")
 # Testing settings
+parser.add_argument('--use_valedges_as_input', action='store_true')
 parser.add_argument('--eval_steps', type=int, default=1)
 parser.add_argument('--log_steps', type=int, default=1)
 parser.add_argument('--data_appendix', type=str, default='', 
@@ -561,6 +563,8 @@ if args.data_appendix == '':
         args.num_hops, ''.join(str(args.ratio_per_hop).split('.')))
     if args.max_nodes_per_hop is not None:
         args.data_appendix += '_mnph{}'.format(args.max_nodes_per_hop)
+    if args.use_valedges_as_input:
+        args.data_appendix += '_uvai'
 
 args.res_dir = os.path.join('results/{}{}'.format(args.dataset, args.save_appendix))
 print('Results will be saved in ' + args.res_dir)
@@ -587,6 +591,13 @@ else:
     dataset = Planetoid(path, args.dataset)
     split_edge = do_edge_split(dataset)
 data = dataset[0]
+
+if args.use_valedges_as_input:
+    val_edge_index = split_edge['valid']['edge'].t()
+    val_edge_index = to_undirected(val_edge_index)
+    data.edge_index = torch.cat([data.edge_index, val_edge_index], dim=-1)
+    val_edge_weight = torch.ones([val_edge_index.size(1), 1], dtype=int)
+    data.edge_weight = torch.cat([data.edge_weight, val_edge_weight], 0)
 
 if args.dataset == 'ogbl-citation':
     args.eval_metric = 'mrr'
@@ -685,13 +696,13 @@ if False:  # visualize some graphs
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     loader = DataLoader(train_dataset, batch_size=1, shuffle=False)
-    for data in loader:
+    for g in loader:
         f = plt.figure(figsize=(20, 20))
         limits = plt.axis('off')
-        data = data.to(device)
+        g = g.to(device)
         node_size = 100
         with_labels = True
-        G = to_networkx(data, node_attrs=['z'])
+        G = to_networkx(g, node_attrs=['z'])
         labels = {i: G.nodes[i]['z'] for i in range(len(G))}
         nx.draw(G, node_size=node_size, arrows=True, with_labels=with_labels,
                 labels=labels)

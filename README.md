@@ -57,16 +57,21 @@ Because this dataset uses mean reciprocal rank (MRR) as the metric where each po
 
 ### Cora
 
-    python seal_link_pred.py --dataset Cora --num_hops 2 --runs 10
+    python seal_link_pred.py --dataset Cora --num_hops 2 --use_feature --runs 10
+
+Our results: val AUC 98.78 ± 0.44, test AUC 98.17 ± 0.37.
 
 ### CiteSeer
 
     python seal_link_pred.py --dataset CiteSeer --num_hops 2 --runs 10
+
+Our results: val AUC 94.60 ± 0.43, test AUC 94.02 ± 0.79.
     
 ### PubMed
 
-    python seal_link_pred.py --dataset PubMed --num_hops 2 --use_feature --runs 10
+    python seal_link_pred.py --dataset PubMed --num_hops 2 --dynamic_train --runs 10
 
+Our results: val AUC 99.11 ± 0.13, test AUC 99.01 ± 0.15.
 
 For all datasets, if you specify "--dynamic_train", the enclosing subgraphs of the training links will be extracted on the fly instead of preprocessing and saving to disk. Similarly for "--dynamic_val" and "--dynamic_test". You can increase "--num_workers" to accelerate the dynamic subgraph extraction process.
 
