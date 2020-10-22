@@ -10,14 +10,17 @@ This repository implements SEAL with the PyTorch-Geometric library, and tests SE
 |              | ogbl-ppa | ogbl-collab | ogbl-ddi | ogbl-citation |
 |--------------|---------------------|-----------------------|--------------------|---------------------|
 | Val results |  51.25%&plusmn;2.52%* |    63.89%&plusmn;0.49%* | 28.49%&plusmn;2.69% |   85.09%&plusmn;0.88%* |
-| Test results |  48.80%&plusmn;3.16%* |    53.71%&plusmn;0.47%* | 30.56%&plusmn;3.86% |   85.27%&plusmn;0.91%* |
+| Test results |  48.80%&plusmn;3.16%* |    63.64%&plusmn;0.71%* | 30.56%&plusmn;3.86% |   85.27%&plusmn;0.91%* |
 
-\* State-of-the-art results; evaluation metrics are Hits@100, Hits@50, Hits@20 and MRR, respectively.
+\* State-of-the-art results; evaluation metrics are Hits@100, Hits@50, Hits@20 and MRR, respectively. For ogbl-collab, we have switched to the new [rule](https://ogb.stanford.edu/docs/leader_rules/), where after all hyperparameters are determined on the validation set, we include validation edges in the training graph and retrain to report the test performance.
 
 The original implementation of SEAL is [here](https://github.com/muhanzhang/SEAL).
 
 The original paper of SEAL is:
 > M. Zhang and Y. Chen, Link Prediction Based on Graph Neural Networks, Advances in Neural Information Processing Systems (NIPS-18). [\[PDF\]](https://arxiv.org/pdf/1802.09691.pdf)
+
+A recent submission discussing the importance of labeling trick for GNN link prediction is:
+> Anonymous submission, Revisiting Graph Neural Networks for Link Prediction, submitted to ICLR 2021. [\[PDF\]](https://openreview.net/pdf?id=8q_ca26L1fz)
 
 Requirements
 ------------
@@ -41,7 +44,7 @@ Usages
 
 ### ogbl-collab
 
-    python seal_link_pred.py --dataset ogbl-collab --num_hops 1 --use_feature --train_percent 10 
+    python seal_link_pred.py --dataset ogbl-collab --num_hops 1 --use_feature --train_percent 10 --use_valedges_as_input
 
 ### ogbl-ddi
 
