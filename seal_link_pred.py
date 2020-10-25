@@ -586,11 +586,13 @@ with open(log_file, 'a') as f:
 if args.dataset.startswith('ogbl'):
     dataset = PygLinkPropPredDataset(name=args.dataset)
     split_edge = dataset.get_edge_split()
+    data = dataset[0]
 else:
     path = osp.join('dataset', args.dataset)
     dataset = Planetoid(path, args.dataset)
     split_edge = do_edge_split(dataset)
-data = dataset[0]
+    data = dataset[0]
+    data.edge_index = split_edge['train']['edge'].t()
 
 if args.use_valedges_as_input:
     val_edge_index = split_edge['valid']['edge'].t()
