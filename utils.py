@@ -93,6 +93,19 @@ def drnl_node_labeling(adj, src, dst):
     return z.to(torch.long)
 
 
+def de_node_labeling(adj, src, dst, max_dist=3):
+    # Distance Encoding.
+    src, dst = (dst, src) if src > dst else (src, dst)
+
+    dist = shortest_path(adj, directed=False, unweighted=True, indices=[src, dst])
+    dist = torch.from_numpy(dist)
+
+    dist[torch.isnan(dist)] = max_dist
+    dist[dist > max_dist] = max_dist
+
+    return dist.to(torch.long).t()
+
+
 def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl'):
     # Construct a pytorch_geometric graph from a scipy csr adjacency matrix.
     u, v, r = ssp.find(adj)
@@ -108,6 +121,8 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
         z = drnl_node_labeling(adj, 0, 1)
     elif node_label == 'hop':
         z = torch.tensor(dists)
+    elif node_label == 'de':
+        z = de_node_labeling(adj, 0, 1)
     data = Data(node_features, edge_index, edge_weight=edge_weight, y=y, z=z, 
                 node_id=node_ids, num_nodes=num_nodes)
     return data
