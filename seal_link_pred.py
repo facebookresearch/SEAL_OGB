@@ -240,6 +240,8 @@ class SAGE(torch.nn.Module):
 
     def forward(self, z, edge_index, batch, x=None, edge_weight=None, node_id=None):
         z_emb = self.z_embedding(z)
+        if z_emb.ndim == 3:  # in case z has multiple integer labels
+            z_emb = z_emb.sum(dim=1)
         if self.use_feature and x is not None:
             x = torch.cat([z_emb, x.to(torch.float)], 1)
         else:
@@ -561,8 +563,8 @@ args = parser.parse_args()
 if args.save_appendix == '':
     args.save_appendix = '_' + time.strftime("%Y%m%d%H%M%S")
 if args.data_appendix == '':
-    args.data_appendix = '_h{}_rph{}'.format(
-        args.num_hops, ''.join(str(args.ratio_per_hop).split('.')))
+    args.data_appendix = '_h{}_{}_rph{}'.format(
+        args.num_hops, args.node_label, ''.join(str(args.ratio_per_hop).split('.')))
     if args.max_nodes_per_hop is not None:
         args.data_appendix += '_mnph{}'.format(args.max_nodes_per_hop)
     if args.use_valedges_as_input:
