@@ -121,6 +121,8 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
         z = drnl_node_labeling(adj, 0, 1)
     elif node_label == 'hop':
         z = torch.tensor(dists)
+    elif node_label == 'simple':
+        z = (torch.tensor(dists)==0).to(torch.long)
     elif node_label == 'de':
         z = de_node_labeling(adj, 0, 1)
     data = Data(node_features, edge_index, edge_weight=edge_weight, y=y, z=z, 
