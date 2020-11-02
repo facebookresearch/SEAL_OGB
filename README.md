@@ -19,8 +19,8 @@ The original implementation of SEAL is [here](https://github.com/muhanzhang/SEAL
 The original paper of SEAL is:
 > M. Zhang and Y. Chen, Link Prediction Based on Graph Neural Networks, Advances in Neural Information Processing Systems (NIPS-18). [\[PDF\]](https://arxiv.org/pdf/1802.09691.pdf)
 
-A recent submission discussing the importance of labeling trick for GNN link prediction is:
-> Anonymous submission, Revisiting Graph Neural Networks for Link Prediction, submitted to ICLR 2021. [\[PDF\]](https://openreview.net/pdf?id=8q_ca26L1fz)
+A recent paper discussing the importance of the labeling trick (i.e., DRNL in SEAL) for GNN link prediction is:
+> M. Zhang, P. Li, Y. Xia, K. Wang, and L. Jin, Revisiting Graph Neural Networks for Link Prediction. [\[PDF\]](https://arxiv.org/pdf/2010.16103.pdf)
 
 Requirements
 ------------
@@ -86,7 +86,7 @@ SEAL\_OGB is released under an MIT license. Find out more about it [here](https:
 Reference
 ---------
 
-If you find the code useful, please cite our paper.
+If you find the code useful, please cite our papers.
 
     @inproceedings{zhang2018link,
       title={Link prediction based on graph neural networks},
@@ -96,5 +96,15 @@ If you find the code useful, please cite our paper.
       year={2018}
     }
 
+    @misc{zhang2020revisiting,
+      title={Revisiting Graph Neural Networks for Link Prediction},
+      author={Muhan Zhang and Pan Li and Yinglong Xia and Kai Wang and Long Jin},
+      year={2020},
+      eprint={2010.16103},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+    }
+
 Muhan Zhang, Facebook AI
+
 10/13/2020
