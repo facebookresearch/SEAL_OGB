@@ -125,6 +125,10 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
         z = (torch.tensor(dists)==0).to(torch.long)
     elif node_label == 'de':
         z = de_node_labeling(adj, 0, 1)
+    elif node_label == 'degree':  # this is technically not a valid labeling trick
+        z = torch.tensor(adj.sum(axis=0)).squeeze(0)
+    else:
+        z = torch.zeros(len(dists), dtype=torch.long)
     data = Data(node_features, edge_index, edge_weight=edge_weight, y=y, z=z, 
                 node_id=node_ids, num_nodes=num_nodes)
     return data
