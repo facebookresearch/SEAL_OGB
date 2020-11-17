@@ -214,7 +214,7 @@ class GCN(torch.nn.Module):
     def __init__(self, hidden_channels, num_layers, max_z, 
                  use_feature=False, node_embedding=None, 
                  dropout=0.5):
-        super(SAGE, self).__init__()
+        super(GCN, self).__init__()
         self.use_feature = use_feature
         self.node_embedding = node_embedding
         self.max_z = max_z
@@ -226,9 +226,9 @@ class GCN(torch.nn.Module):
             initial_channels += dataset.num_features
         if self.node_embedding is not None:
             initial_channels += node_embedding.embedding_dim
-        self.convs.append(GCNConv(initial_channels, hidden_channels, cached=True))
+        self.convs.append(GCNConv(initial_channels, hidden_channels))
         for _ in range(num_layers - 1):
-            self.convs.append(SAGEConv(hidden_channels, hidden_channels, cached=True))
+            self.convs.append(GCNConv(hidden_channels, hidden_channels))
 
         self.dropout = dropout
         self.lin1 = Linear(hidden_channels, hidden_channels)
