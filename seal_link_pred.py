@@ -830,6 +830,10 @@ for run in range(args.runs):
         model = SAGE(hidden_channels=args.hidden_channels, num_layers=args.num_layers, 
                      max_z=max_z, use_feature=args.use_feature, 
                      node_embedding=emb).to(device)
+    elif args.model == 'GCN':
+        model = GCN(hidden_channels=args.hidden_channels, num_layers=args.num_layers, 
+                    max_z=max_z, use_feature=args.use_feature, 
+                    node_embedding=emb).to(device)
     parameters = list(model.parameters())
     if args.train_node_embedding:
         torch.nn.init.xavier_uniform_(emb.weight)
