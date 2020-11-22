@@ -254,7 +254,7 @@ class GCN(torch.nn.Module):
             x = conv(x, edge_index, edge_weight)
             x = F.relu(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.convs[-1](x, edge_index)
+        x = self.convs[-1](x, edge_index, edge_weight)
         if True:  # center pooling
             _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
             x_src = x[center_indices]
