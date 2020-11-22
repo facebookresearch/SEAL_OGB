@@ -154,7 +154,7 @@ class SEALDataset(InMemoryDataset):
         # Extract enclosing subgraphs for pos and neg edges
         pos_list = extract_enclosing_subgraphs(
             pos_edge, A, self.data.x, 1, self.num_hops, self.node_label, 
-            self.ratio_per_hop, self.max_nodes_per_hopk, self.directed)
+            self.ratio_per_hop, self.max_nodes_per_hop, self.directed)
         neg_list = extract_enclosing_subgraphs(
             neg_edge, A, self.data.x, 0, self.num_hops, self.node_label, 
             self.ratio_per_hop, self.max_nodes_per_hop, self.directed)
