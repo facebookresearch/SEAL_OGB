@@ -60,6 +60,7 @@ def do_edge_split(dataset):
     split_edge['test']['edge_neg'] = data.test_neg_edge_index.t()
     return split_edge
 
+
 def get_pos_neg_edges(split, split_edge, edge_index, num_nodes, percent=100):
     if 'edge' in split_edge['train']:
         pos_edge = split_edge[split]['edge'].t()
