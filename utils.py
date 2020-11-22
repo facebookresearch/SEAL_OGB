@@ -16,17 +16,17 @@ from torch_geometric.data import Data
 import pdb
 
 
-def neighbors(fringe, A, row=True):
+def neighbors(fringe, A, outgoing=True):
     # Find all 1-hop neighbors of nodes in fringe from graph A, 
     # where A is a scipy csr adjacency matrix.
-    res = set()
-    for node in fringe:
-        if row:
-            _, nei, _ = ssp.find(A[node, :])
-        else:
-            nei, _, _ = ssp.find(A[:, node])
-        nei = set(nei)
-        res = res.union(nei)
+    # If outgoing=True, find neighbors with outgoing edges;
+    # else, find neighbors with incoming edges. Note that the csr
+    # matrix is not efficient for column indexing. Consider switch
+    # to csc if you mainly want incoming neighbors.
+    if outgoing:
+        res = set(A[list(fringe)].indices)
+    else:
+        res = set(A[:, list(fringe)].indices)
 
     return res
 
