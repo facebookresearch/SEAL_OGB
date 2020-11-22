@@ -32,14 +32,20 @@ def neighbors(fringe, A, outgoing=True):
 
 
 def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0, 
-                   max_nodes_per_hop=None, node_features=None, y=1):
+                   max_nodes_per_hop=None, node_features=None, 
+                   y=1, directed=False):
     # Extract the k-hop enclosing subgraph around link (src, dst) from A. 
     nodes = [src, dst]
     dists = [0, 0]
     visited = set([src, dst])
     fringe = set([src, dst])
     for dist in range(1, num_hops+1):
-        fringe = neighbors(fringe, A)
+        if not directed:
+            fringe = neighbors(fringe, A)
+        else:
+            out_neighbors = neighbors(fringe, A)
+            in_neighbors = neighbors(fringe, A, False)
+            fringe = out_neighbors.union(in_neighbors)
         fringe = fringe - visited
         visited = visited.union(fringe)
         if sample_ratio < 1.0:
@@ -136,12 +142,14 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
 
  
 def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl', 
-                                ratio_per_hop=1.0, max_nodes_per_hop=None):
+                                ratio_per_hop=1.0, max_nodes_per_hop=None, 
+                                directed=False):
     # Extract enclosing subgraphs from A for all links in link_index.
     data_list = []
     for src, dst in tqdm(link_index.t().tolist()):
         tmp = k_hop_subgraph(src, dst, num_hops, A, ratio_per_hop, 
-                             max_nodes_per_hop, node_features=x, y=y)
+                             max_nodes_per_hop, node_features=x, y=y, 
+                             directed=directed)
         data = construct_pyg_graph(*tmp, node_label)
         data_list.append(data)
 

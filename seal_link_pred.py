@@ -108,7 +108,7 @@ def get_pos_neg_edges(split, split_edge, edge_index, num_nodes, percent=100):
 class SEALDataset(InMemoryDataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train', 
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0, 
-                 max_nodes_per_hop=None):
+                 max_nodes_per_hop=None, directed=False):
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -118,6 +118,7 @@ class SEALDataset(InMemoryDataset):
         self.node_label = node_label
         self.ratio_per_hop = ratio_per_hop
         self.max_nodes_per_hop = max_nodes_per_hop
+        self.directed = directed
         super(SEALDataset, self).__init__(root)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
@@ -152,11 +153,11 @@ class SEALDataset(InMemoryDataset):
         
         # Extract enclosing subgraphs for pos and neg edges
         pos_list = extract_enclosing_subgraphs(
-            pos_edge, A, self.data.x, 1, self.num_hops, 
-            self.node_label, self.ratio_per_hop, self.max_nodes_per_hop)
+            pos_edge, A, self.data.x, 1, self.num_hops, self.node_label, 
+            self.ratio_per_hop, self.max_nodes_per_hopk, self.directed)
         neg_list = extract_enclosing_subgraphs(
-            neg_edge, A, self.data.x, 0, self.num_hops, 
-            self.node_label, self.ratio_per_hop, self.max_nodes_per_hop)
+            neg_edge, A, self.data.x, 0, self.num_hops, self.node_label, 
+            self.ratio_per_hop, self.max_nodes_per_hop, self.directed)
 
         torch.save(self.collate(pos_list + neg_list), self.processed_paths[0])
         del pos_list, neg_list
@@ -165,7 +166,7 @@ class SEALDataset(InMemoryDataset):
 class SEALDynamicDataset(Dataset):
     def __init__(self, root, data, split_edge, num_hops, percent=100, split='train', 
                  use_coalesce=False, node_label='drnl', ratio_per_hop=1.0, 
-                 max_nodes_per_hop=None, **kwargs):
+                 max_nodes_per_hop=None, directed=False, **kwargs):
         self.data = data
         self.split_edge = split_edge
         self.num_hops = num_hops
@@ -174,6 +175,7 @@ class SEALDynamicDataset(Dataset):
         self.node_label = node_label
         self.ratio_per_hop = ratio_per_hop
         self.max_nodes_per_hop = max_nodes_per_hop
+        self.directed = directed
         super(SEALDynamicDataset, self).__init__(root)
 
         pos_edge, neg_edge = get_pos_neg_edges(split, self.split_edge, 
@@ -205,7 +207,7 @@ class SEALDynamicDataset(Dataset):
         y = self.labels[idx]
         tmp = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop, 
                              self.max_nodes_per_hop, node_features=self.data.x, 
-                             y=y)
+                             y=y, directed=self.directed)
         data = construct_pyg_graph(*tmp, self.node_label)
 
         return data
@@ -416,7 +418,7 @@ def train():
     model.train()
 
     total_loss = 0
-    pbar = tqdm(train_loader)
+    pbar = tqdm(train_loader, ncols=70)
     for data in pbar:
         data = data.to(device)
         optimizer.zero_grad()
@@ -437,7 +439,7 @@ def test():
     model.eval()
 
     y_pred, y_true = [], []
-    for data in tqdm(val_loader):
+    for data in tqdm(val_loader, ncols=70):
         data = data.to(device)
         x = data.x if args.use_feature else None
         edge_weight = data.edge_weight if args.use_edge_weight else None
@@ -450,7 +452,7 @@ def test():
     neg_val_pred = val_pred[val_true==0]
 
     y_pred, y_true = [], []
-    for data in tqdm(test_loader):
+    for data in tqdm(test_loader, ncols=70):
         data = data.to(device)
         x = data.x if args.use_feature else None
         edge_weight = data.edge_weight if args.use_edge_weight else None
@@ -478,7 +480,7 @@ def test_multiple_models(models):
         m.eval()
 
     y_pred, y_true = [[] for _ in range(len(models))], [[] for _ in range(len(models))]
-    for data in tqdm(val_loader):
+    for data in tqdm(val_loader, ncols=70):
         data = data.to(device)
         x = data.x if args.use_feature else None
         edge_weight = data.edge_weight if args.use_edge_weight else None
@@ -493,7 +495,7 @@ def test_multiple_models(models):
     neg_val_pred = [val_pred[i][val_true[i]==0] for i in range(len(models))]
 
     y_pred, y_true = [[] for _ in range(len(models))], [[] for _ in range(len(models))]
-    for data in tqdm(test_loader):
+    for data in tqdm(test_loader, ncols=70):
         data = data.to(device)
         x = data.x if args.use_feature else None
         edge_weight = data.edge_weight if args.use_edge_weight else None
@@ -660,19 +662,23 @@ else:
     data = dataset[0]
     data.edge_index = split_edge['train']['edge'].t()
 
+if args.dataset == 'ogbl-citation':
+    args.eval_metric = 'mrr'
+    directed = True
+elif args.dataset.startswith('ogbl'):
+    args.eval_metric = 'hits'
+    directed = False
+else:  # assume other datasets are undirected
+    args.eval_metric = 'auc'
+    directed = False
+
 if args.use_valedges_as_input:
     val_edge_index = split_edge['valid']['edge'].t()
-    val_edge_index = to_undirected(val_edge_index)
+    if not directed:
+        val_edge_index = to_undirected(val_edge_index)
     data.edge_index = torch.cat([data.edge_index, val_edge_index], dim=-1)
     val_edge_weight = torch.ones([val_edge_index.size(1), 1], dtype=int)
     data.edge_weight = torch.cat([data.edge_weight, val_edge_weight], 0)
-
-if args.dataset == 'ogbl-citation':
-    args.eval_metric = 'mrr'
-elif args.dataset.startswith('ogbl'):
-    args.eval_metric = 'hits'
-else:
-    args.eval_metric = 'auc'
 
 if args.dataset.startswith('ogbl'):
     evaluator = Evaluator(name=args.dataset)
