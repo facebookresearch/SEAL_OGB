@@ -762,6 +762,7 @@ train_dataset = eval(dataset_class)(
     node_label=args.node_label, 
     ratio_per_hop=args.ratio_per_hop, 
     max_nodes_per_hop=args.max_nodes_per_hop, 
+    directed=directed, 
 ) 
 if False:  # visualize some graphs
     import networkx as nx
@@ -795,6 +796,7 @@ val_dataset = eval(dataset_class)(
     node_label=args.node_label, 
     ratio_per_hop=args.ratio_per_hop, 
     max_nodes_per_hop=args.max_nodes_per_hop, 
+    directed=directed, 
 )
 dataset_class = 'SEALDynamicDataset' if args.dynamic_test else 'SEALDataset'
 test_dataset = eval(dataset_class)(
@@ -808,6 +810,7 @@ test_dataset = eval(dataset_class)(
     node_label=args.node_label, 
     ratio_per_hop=args.ratio_per_hop, 
     max_nodes_per_hop=args.max_nodes_per_hop, 
+    directed=directed, 
 )
 
 max_z = 1000  # set a large max_z so that every z has embeddings to look up
