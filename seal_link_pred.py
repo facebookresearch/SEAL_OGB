@@ -150,14 +150,19 @@ class SEALDataset(InMemoryDataset):
             (edge_weight, (self.data.edge_index[0], self.data.edge_index[1])), 
             shape=(self.data.num_nodes, self.data.num_nodes)
         )
+
+        if self.directed:
+            A_csc = A.tocsc()
+        else:
+            A_csc = None
         
         # Extract enclosing subgraphs for pos and neg edges
         pos_list = extract_enclosing_subgraphs(
             pos_edge, A, self.data.x, 1, self.num_hops, self.node_label, 
-            self.ratio_per_hop, self.max_nodes_per_hop, self.directed)
+            self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc)
         neg_list = extract_enclosing_subgraphs(
             neg_edge, A, self.data.x, 0, self.num_hops, self.node_label, 
-            self.ratio_per_hop, self.max_nodes_per_hop, self.directed)
+            self.ratio_per_hop, self.max_nodes_per_hop, self.directed, A_csc)
 
         torch.save(self.collate(pos_list + neg_list), self.processed_paths[0])
         del pos_list, neg_list
@@ -198,6 +203,10 @@ class SEALDynamicDataset(Dataset):
             (edge_weight, (self.data.edge_index[0], self.data.edge_index[1])), 
             shape=(self.data.num_nodes, self.data.num_nodes)
         )
+        if self.directed:
+            self.A_csc = self.A.tocsc()
+        else:
+            self.A_csc = None
         
     def __len__(self):
         return len(self.links)
@@ -207,7 +216,7 @@ class SEALDynamicDataset(Dataset):
         y = self.labels[idx]
         tmp = k_hop_subgraph(src, dst, self.num_hops, self.A, self.ratio_per_hop, 
                              self.max_nodes_per_hop, node_features=self.data.x, 
-                             y=y, directed=self.directed)
+                             y=y, directed=self.directed, A_csc=self.A_csc)
         data = construct_pyg_graph(*tmp, self.node_label)
 
         return data
@@ -664,7 +673,7 @@ else:
 
 if args.dataset == 'ogbl-citation':
     args.eval_metric = 'mrr'
-    directed = False  # set to False now because the column slicing of CSR is slow
+    directed = True
 elif args.dataset.startswith('ogbl'):
     args.eval_metric = 'hits'
     directed = False
