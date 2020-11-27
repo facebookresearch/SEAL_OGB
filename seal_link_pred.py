@@ -664,7 +664,7 @@ else:
 
 if args.dataset == 'ogbl-citation':
     args.eval_metric = 'mrr'
-    directed = True
+    directed = False  # set to False now because the column slicing of CSR is slow
 elif args.dataset.startswith('ogbl'):
     args.eval_metric = 'hits'
     directed = False
