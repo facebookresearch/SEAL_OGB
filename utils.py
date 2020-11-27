@@ -20,9 +20,8 @@ def neighbors(fringe, A, outgoing=True):
     # Find all 1-hop neighbors of nodes in fringe from graph A, 
     # where A is a scipy csr adjacency matrix.
     # If outgoing=True, find neighbors with outgoing edges;
-    # else, find neighbors with incoming edges. Note that the csr
-    # matrix is not efficient for column indexing. Consider switch
-    # to csc if you mainly want incoming neighbors.
+    # otherwise, find neighbors with incoming edges (you should
+    # provide a csc matrix in this case).
     if outgoing:
         res = set(A[list(fringe)].indices)
     else:
