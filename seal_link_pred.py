@@ -3,12 +3,9 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
-import math
 import time
-import random
 import os, sys
 import os.path as osp
-from itertools import chain
 from shutil import copy
 import copy as cp
 from tqdm import tqdm
@@ -18,91 +15,23 @@ import numpy as np
 from sklearn.metrics import roc_auc_score
 import scipy.sparse as ssp
 import torch
-import torch.nn.functional as F
 from torch.nn import BCEWithLogitsLoss
-from torch.nn import ModuleList, Linear, Conv1d, MaxPool1d, Embedding
 from torch.utils.data import DataLoader
 
 from torch_sparse import coalesce
-from torch_scatter import scatter_min
 import torch_geometric.transforms as T
 from torch_geometric.datasets import Planetoid
-from torch_geometric.nn import GCNConv, SAGEConv, global_sort_pool, global_add_pool
 from torch_geometric.data import Data, Dataset, InMemoryDataset, DataLoader
-from torch_geometric.utils import (negative_sampling, add_self_loops,
-                                   train_test_split_edges, to_networkx, 
-                                   to_scipy_sparse_matrix, to_undirected)
+from torch_geometric.utils import to_networkx, to_undirected
 
 from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 
 import warnings
 from scipy.sparse import SparseEfficiencyWarning
-warnings.simplefilter('ignore',SparseEfficiencyWarning)
+warnings.simplefilter('ignore', SparseEfficiencyWarning)
 
 from utils import *
-
-
-def do_edge_split(dataset):
-    data = dataset[0]
-    data = train_test_split_edges(data)
-
-    edge_index, _ = add_self_loops(data.train_pos_edge_index)
-    data.train_neg_edge_index = negative_sampling(
-        edge_index, num_nodes=data.num_nodes,
-        num_neg_samples=data.train_pos_edge_index.size(1))
-
-    split_edge = {'train': {}, 'valid': {}, 'test': {}}
-    split_edge['train']['edge'] = data.train_pos_edge_index.t()
-    split_edge['train']['edge_neg'] = data.train_neg_edge_index.t()
-    split_edge['valid']['edge'] = data.val_pos_edge_index.t()
-    split_edge['valid']['edge_neg'] = data.val_neg_edge_index.t()
-    split_edge['test']['edge'] = data.test_pos_edge_index.t()
-    split_edge['test']['edge_neg'] = data.test_neg_edge_index.t()
-    return split_edge
-
-
-def get_pos_neg_edges(split, split_edge, edge_index, num_nodes, percent=100):
-    if 'edge' in split_edge['train']:
-        pos_edge = split_edge[split]['edge'].t()
-        if split == 'train':
-            new_edge_index, _ = add_self_loops(edge_index)
-            neg_edge = negative_sampling(
-                new_edge_index, num_nodes=num_nodes,
-                num_neg_samples=pos_edge.size(1))
-        else:
-            neg_edge = split_edge[split]['edge_neg'].t()
-        # subsample for pos_edge
-        np.random.seed(123)
-        num_pos = pos_edge.size(1)
-        perm = np.random.permutation(num_pos)
-        perm = perm[:int(percent / 100 * num_pos)]
-        pos_edge = pos_edge[:, perm]
-        # subsample for neg_edge
-        np.random.seed(123)
-        num_neg = neg_edge.size(1)
-        perm = np.random.permutation(num_neg)
-        perm = perm[:int(percent / 100 * num_neg)]
-        neg_edge = neg_edge[:, perm]
-
-    elif 'source_node' in split_edge['train']:
-        source = split_edge[split]['source_node']
-        target = split_edge[split]['target_node']
-        if split == 'train':
-            target_neg = torch.randint(0, num_nodes, [target.size(0), 1],
-                                       dtype=torch.long)
-        else:
-            target_neg = split_edge[split]['target_node_neg']
-        # subsample
-        np.random.seed(123)
-        num_source = source.size(0)
-        perm = np.random.permutation(num_source)
-        perm = perm[:int(percent / 100 * num_source)]
-        source, target, target_neg = source[perm], target[perm], target_neg[perm, :]
-        pos_edge = torch.stack([source, target])
-        neg_per_target = target_neg.size(1)
-        neg_edge = torch.stack([source.repeat_interleave(neg_per_target), 
-                                target_neg.view(-1)])
-    return pos_edge, neg_edge
+from models import *
 
 
 class SEALDataset(InMemoryDataset):
@@ -220,207 +149,6 @@ class SEALDynamicDataset(Dataset):
         data = construct_pyg_graph(*tmp, self.node_label)
 
         return data
-
-
-class GCN(torch.nn.Module):
-    def __init__(self, hidden_channels, num_layers, max_z, 
-                 use_feature=False, node_embedding=None, 
-                 dropout=0.5):
-        super(GCN, self).__init__()
-        self.use_feature = use_feature
-        self.node_embedding = node_embedding
-        self.max_z = max_z
-        self.z_embedding = Embedding(self.max_z, hidden_channels)
-
-        self.convs = torch.nn.ModuleList()
-        initial_channels = hidden_channels
-        if self.use_feature:
-            initial_channels += dataset.num_features
-        if self.node_embedding is not None:
-            initial_channels += node_embedding.embedding_dim
-        self.convs.append(GCNConv(initial_channels, hidden_channels))
-        for _ in range(num_layers - 1):
-            self.convs.append(GCNConv(hidden_channels, hidden_channels))
-
-        self.dropout = dropout
-        self.lin1 = Linear(hidden_channels, hidden_channels)
-        self.lin2 = Linear(hidden_channels, 1)
-
-    def reset_parameters(self):
-        for conv in self.convs:
-            conv.reset_parameters()
-
-    def forward(self, z, edge_index, batch, x=None, edge_weight=None, node_id=None):
-        z_emb = self.z_embedding(z)
-        if z_emb.ndim == 3:  # in case z has multiple integer labels
-            z_emb = z_emb.sum(dim=1)
-        if self.use_feature and x is not None:
-            x = torch.cat([z_emb, x.to(torch.float)], 1)
-        else:
-            x = z_emb
-        if self.node_embedding is not None and node_id is not None:
-            n_emb = self.node_embedding(node_id)
-            x = torch.cat([x, n_emb], 1)
-        for conv in self.convs[:-1]:
-            x = conv(x, edge_index, edge_weight)
-            x = F.relu(x)
-            x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.convs[-1](x, edge_index, edge_weight)
-        if True:  # center pooling
-            _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
-            x_src = x[center_indices]
-            x_dst = x[center_indices + 1]
-            x = (x_src * x_dst)
-            x = F.relu(self.lin1(x))
-            x = F.dropout(x, p=self.dropout, training=self.training)
-            x = self.lin2(x)
-        else:  # sum pooling
-            x = global_add_pool(x, batch)
-            x = F.relu(self.lin1(x))
-            x = F.dropout(x, p=self.dropout, training=self.training)
-            x = self.lin2(x)
-
-        return x
-
-
-class SAGE(torch.nn.Module):
-    def __init__(self, hidden_channels, num_layers, max_z, 
-                 use_feature=False, node_embedding=None, 
-                 dropout=0.5):
-        super(SAGE, self).__init__()
-        self.use_feature = use_feature
-        self.node_embedding = node_embedding
-        self.max_z = max_z
-        self.z_embedding = Embedding(self.max_z, hidden_channels)
-
-        self.convs = torch.nn.ModuleList()
-        initial_channels = hidden_channels
-        if self.use_feature:
-            initial_channels += dataset.num_features
-        if self.node_embedding is not None:
-            initial_channels += node_embedding.embedding_dim
-        self.convs.append(SAGEConv(initial_channels, hidden_channels))
-        for _ in range(num_layers - 1):
-            self.convs.append(SAGEConv(hidden_channels, hidden_channels))
-
-        self.dropout = dropout
-        self.lin1 = Linear(hidden_channels, hidden_channels)
-        self.lin2 = Linear(hidden_channels, 1)
-
-    def reset_parameters(self):
-        for conv in self.convs:
-            conv.reset_parameters()
-
-    def forward(self, z, edge_index, batch, x=None, edge_weight=None, node_id=None):
-        z_emb = self.z_embedding(z)
-        if z_emb.ndim == 3:  # in case z has multiple integer labels
-            z_emb = z_emb.sum(dim=1)
-        if self.use_feature and x is not None:
-            x = torch.cat([z_emb, x.to(torch.float)], 1)
-        else:
-            x = z_emb
-        if self.node_embedding is not None and node_id is not None:
-            n_emb = self.node_embedding(node_id)
-            x = torch.cat([x, n_emb], 1)
-        for conv in self.convs[:-1]:
-            x = conv(x, edge_index)
-            x = F.relu(x)
-            x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.convs[-1](x, edge_index)
-        if True:  # center pooling
-            _, center_indices = np.unique(batch.cpu().numpy(), return_index=True)
-            x_src = x[center_indices]
-            x_dst = x[center_indices + 1]
-            x = (x_src * x_dst)
-            x = F.relu(self.lin1(x))
-            x = F.dropout(x, p=self.dropout, training=self.training)
-            x = self.lin2(x)
-        else:  # sum pooling
-            x = global_add_pool(x, batch)
-            x = F.relu(self.lin1(x))
-            x = F.dropout(x, p=self.dropout, training=self.training)
-            x = self.lin2(x)
-
-        return x
-
-
-# An end-to-end deep learning architecture for graph classification, AAAI-18.
-class DGCNN(torch.nn.Module):
-    def __init__(self, hidden_channels, num_layers, max_z, GNN=GCNConv, k=0.6, 
-                 use_feature=False, node_embedding=None):
-        super(DGCNN, self).__init__()
-
-        self.use_feature = use_feature
-        self.node_embedding = node_embedding
-
-        if k <= 1:  # Transform percentile to number.
-            if args.dynamic_train:
-                sampled_train = train_dataset[:1000]
-            else:
-                sampled_train = train_dataset
-            num_nodes = sorted([g.num_nodes for g in sampled_train])
-            k = num_nodes[int(math.ceil(k * len(num_nodes))) - 1]
-            k = max(10, k)
-        self.k = int(k)
-
-        self.max_z = max_z
-        self.z_embedding = Embedding(self.max_z, hidden_channels)
-
-        self.convs = ModuleList()
-        initial_channels = hidden_channels
-        if self.use_feature:
-            initial_channels += dataset.num_features
-        if self.node_embedding is not None:
-            initial_channels += node_embedding.embedding_dim
-
-        self.convs.append(GNN(initial_channels, hidden_channels))
-        for i in range(0, num_layers-1):
-            self.convs.append(GNN(hidden_channels, hidden_channels))
-        self.convs.append(GNN(hidden_channels, 1))
-
-        conv1d_channels = [16, 32]
-        total_latent_dim = hidden_channels * num_layers + 1
-        conv1d_kws = [total_latent_dim, 5]
-        self.conv1 = Conv1d(1, conv1d_channels[0], conv1d_kws[0],
-                            conv1d_kws[0])
-        self.maxpool1d = MaxPool1d(2, 2)
-        self.conv2 = Conv1d(conv1d_channels[0], conv1d_channels[1],
-                            conv1d_kws[1], 1)
-        dense_dim = int((self.k - 2) / 2 + 1)
-        dense_dim = (dense_dim - conv1d_kws[1] + 1) * conv1d_channels[1]
-        self.lin1 = Linear(dense_dim, 128)
-        self.lin2 = Linear(128, 1)
-
-    def forward(self, z, edge_index, batch, x=None, edge_weight=None, node_id=None):
-        z_emb = self.z_embedding(z)
-        if z_emb.ndim == 3:  # in case z has multiple integer labels
-            z_emb = z_emb.sum(dim=1)
-        if self.use_feature and x is not None:
-            x = torch.cat([z_emb, x.to(torch.float)], 1)
-        else:
-            x = z_emb
-        if self.node_embedding is not None and node_id is not None:
-            n_emb = self.node_embedding(node_id)
-            x = torch.cat([x, n_emb], 1)
-        xs = [x]
-
-        for conv in self.convs:
-            xs += [torch.tanh(conv(xs[-1], edge_index, edge_weight))]
-        x = torch.cat(xs[1:], dim=-1)
-
-        # Global pooling.
-        x = global_sort_pool(x, batch, self.k)
-        x = x.unsqueeze(1)  # [num_graphs, 1, k * hidden]
-        x = F.relu(self.conv1(x))
-        x = self.maxpool1d(x)
-        x = F.relu(self.conv2(x))
-        x = x.view(x.size(0), -1)  # [num_graphs, dense_dim]
-
-        # MLP.
-        x = F.relu(self.lin1(x))
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = self.lin2(x)
-        return x
 
 
 def train():
@@ -842,17 +570,15 @@ else:
 
 for run in range(args.runs):
     if args.model == 'DGCNN':
-        model = DGCNN(hidden_channels=args.hidden_channels, num_layers=args.num_layers, 
-                      max_z=max_z, k=args.sortpool_k, use_feature=args.use_feature, 
+        model = DGCNN(args.hidden_channels, args.num_layers, max_z, args.sortpool_k, 
+                      train_dataset, args.dynamic_train, use_feature=args.use_feature, 
                       node_embedding=emb).to(device)
     elif args.model == 'SAGE':
-        model = SAGE(hidden_channels=args.hidden_channels, num_layers=args.num_layers, 
-                     max_z=max_z, use_feature=args.use_feature, 
-                     node_embedding=emb).to(device)
+        model = SAGE(args.hidden_channels, args.num_layers, max_z, train_dataset,  
+                     args.use_feature, node_embedding=emb).to(device)
     elif args.model == 'GCN':
-        model = GCN(hidden_channels=args.hidden_channels, num_layers=args.num_layers, 
-                    max_z=max_z, use_feature=args.use_feature, 
-                    node_embedding=emb).to(device)
+        model = GCN(args.hidden_channels, args.num_layers, max_z, train_dataset, 
+                    args.use_feature, node_embedding=emb).to(device)
     parameters = list(model.parameters())
     if args.train_node_embedding:
         torch.nn.init.xavier_uniform_(emb.weight)

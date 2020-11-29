@@ -13,6 +13,8 @@ from torch_sparse import spspmm
 import torch_geometric
 from torch_geometric.data import DataLoader
 from torch_geometric.data import Data
+from torch_geometric.utils import (negative_sampling, add_self_loops,
+                                   train_test_split_edges)
 import pdb
 
 
@@ -153,6 +155,69 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
         data_list.append(data)
 
     return data_list
+
+
+def do_edge_split(dataset):
+    data = dataset[0]
+    data = train_test_split_edges(data)
+
+    edge_index, _ = add_self_loops(data.train_pos_edge_index)
+    data.train_neg_edge_index = negative_sampling(
+        edge_index, num_nodes=data.num_nodes,
+        num_neg_samples=data.train_pos_edge_index.size(1))
+
+    split_edge = {'train': {}, 'valid': {}, 'test': {}}
+    split_edge['train']['edge'] = data.train_pos_edge_index.t()
+    split_edge['train']['edge_neg'] = data.train_neg_edge_index.t()
+    split_edge['valid']['edge'] = data.val_pos_edge_index.t()
+    split_edge['valid']['edge_neg'] = data.val_neg_edge_index.t()
+    split_edge['test']['edge'] = data.test_pos_edge_index.t()
+    split_edge['test']['edge_neg'] = data.test_neg_edge_index.t()
+    return split_edge
+
+
+def get_pos_neg_edges(split, split_edge, edge_index, num_nodes, percent=100):
+    if 'edge' in split_edge['train']:
+        pos_edge = split_edge[split]['edge'].t()
+        if split == 'train':
+            new_edge_index, _ = add_self_loops(edge_index)
+            neg_edge = negative_sampling(
+                new_edge_index, num_nodes=num_nodes,
+                num_neg_samples=pos_edge.size(1))
+        else:
+            neg_edge = split_edge[split]['edge_neg'].t()
+        # subsample for pos_edge
+        np.random.seed(123)
+        num_pos = pos_edge.size(1)
+        perm = np.random.permutation(num_pos)
+        perm = perm[:int(percent / 100 * num_pos)]
+        pos_edge = pos_edge[:, perm]
+        # subsample for neg_edge
+        np.random.seed(123)
+        num_neg = neg_edge.size(1)
+        perm = np.random.permutation(num_neg)
+        perm = perm[:int(percent / 100 * num_neg)]
+        neg_edge = neg_edge[:, perm]
+
+    elif 'source_node' in split_edge['train']:
+        source = split_edge[split]['source_node']
+        target = split_edge[split]['target_node']
+        if split == 'train':
+            target_neg = torch.randint(0, num_nodes, [target.size(0), 1],
+                                       dtype=torch.long)
+        else:
+            target_neg = split_edge[split]['target_node_neg']
+        # subsample
+        np.random.seed(123)
+        num_source = source.size(0)
+        perm = np.random.permutation(num_source)
+        perm = perm[:int(percent / 100 * num_source)]
+        source, target, target_neg = source[perm], target[perm], target_neg[perm, :]
+        pos_edge = torch.stack([source, target])
+        neg_per_target = target_neg.size(1)
+        neg_edge = torch.stack([source.repeat_interleave(neg_per_target), 
+                                target_neg.view(-1)])
+    return pos_edge, neg_edge
 
 
 def CN(A, edge_index, batch_size=100000):
