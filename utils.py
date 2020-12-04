@@ -15,6 +15,7 @@ from torch_geometric.data import DataLoader
 from torch_geometric.data import Data
 from torch_geometric.utils import (negative_sampling, add_self_loops,
                                    train_test_split_edges)
+from fast_pagerank import pagerank_power
 import pdb
 
 
@@ -228,7 +229,7 @@ def CN(A, edge_index, batch_size=100000):
         src, dst = edge_index[0, ind], edge_index[1, ind]
         cur_scores = np.array(np.sum(A[src].multiply(A[dst]), 1)).flatten()
         scores.append(cur_scores)
-    return torch.FloatTensor(np.concatenate(scores, 0))
+    return torch.FloatTensor(np.concatenate(scores, 0)), edge_index
 
 
 def AA(A, edge_index, batch_size=100000):
@@ -243,7 +244,39 @@ def AA(A, edge_index, batch_size=100000):
         cur_scores = np.array(np.sum(A[src].multiply(A_[dst]), 1)).flatten()
         scores.append(cur_scores)
     scores = np.concatenate(scores, 0)
-    return torch.FloatTensor(scores)
+    return torch.FloatTensor(scores), edge_index
+
+
+def PPR(A, edge_index):
+    # The Personalized PageRank heuristic score.
+    num_nodes = A.shape[0]
+    src_index, sort_indices = torch.sort(edge_index[0])
+    dst_index = edge_index[1, sort_indices]
+    edge_index = torch.stack([src_index, dst_index])
+    #edge_index = edge_index[:, :50]
+    scores = []
+    visited = set([])
+    j = 0
+    for i in tqdm(range(edge_index.shape[1])):
+        if i < j:
+            continue
+        src = edge_index[0, i]
+        personalize = np.zeros(num_nodes)
+        personalize[src] = 1
+        ppr = pagerank_power(A, p=0.85, personalize=personalize, tol=1e-3)
+        j = i
+        while edge_index[0, j] == src:
+            j += 1
+            if j == edge_index.shape[1]:
+                break
+        all_dst = edge_index[1, i:j]
+        cur_scores = ppr[all_dst]
+        if cur_scores.ndim == 0:
+            cur_scores = np.expand_dims(cur_scores, 0)
+        scores.append(np.array(cur_scores))
+
+    scores = np.concatenate(scores, 0)
+    return torch.FloatTensor(scores), edge_index
 
 
 class Logger(object):

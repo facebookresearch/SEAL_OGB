@@ -453,10 +453,10 @@ if args.use_heuristic:
     pos_test_edge, neg_test_edge = get_pos_neg_edges('test', split_edge, 
                                                      data.edge_index, 
                                                      data.num_nodes)
-    pos_val_pred = eval(args.use_heuristic)(A, pos_val_edge)
-    neg_val_pred = eval(args.use_heuristic)(A, neg_val_edge)
-    pos_test_pred = eval(args.use_heuristic)(A, pos_test_edge)
-    neg_test_pred = eval(args.use_heuristic)(A, neg_test_edge)
+    pos_val_pred, pos_val_edge = eval(args.use_heuristic)(A, pos_val_edge)
+    neg_val_pred, neg_val_edge = eval(args.use_heuristic)(A, neg_val_edge)
+    pos_test_pred, pos_test_edge = eval(args.use_heuristic)(A, pos_test_edge)
+    neg_test_pred, neg_test_edge = eval(args.use_heuristic)(A, neg_test_edge)
 
     if args.eval_metric == 'hits':
         results = evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
