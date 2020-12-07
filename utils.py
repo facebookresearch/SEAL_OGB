@@ -160,6 +160,8 @@ def extract_enclosing_subgraphs(link_index, A, x, y, num_hops, node_label='drnl'
 
 def do_edge_split(dataset):
     data = dataset[0]
+    random.seed(234)
+    torch.manual_seed(234)
     data = train_test_split_edges(data)
 
     edge_index, _ = add_self_loops(data.train_pos_edge_index)
