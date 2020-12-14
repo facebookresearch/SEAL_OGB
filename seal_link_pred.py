@@ -579,6 +579,9 @@ for run in range(args.runs):
     elif args.model == 'GCN':
         model = GCN(args.hidden_channels, args.num_layers, max_z, train_dataset, 
                     args.use_feature, node_embedding=emb).to(device)
+    elif args.model == 'GIN':
+        model = GIN(args.hidden_channels, args.num_layers, max_z, train_dataset, 
+                    args.use_feature, node_embedding=emb).to(device)
     parameters = list(model.parameters())
     if args.train_node_embedding:
         torch.nn.init.xavier_uniform_(emb.weight)
