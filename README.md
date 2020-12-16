@@ -9,8 +9,8 @@ This repository implements SEAL with the PyTorch-Geometric library, and tests SE
 
 |              | ogbl-ppa | ogbl-collab | ogbl-ddi | ogbl-citation |
 |--------------|---------------------|-----------------------|--------------------|---------------------|
-| Val results |  51.25%&plusmn;2.52%* |    63.89%&plusmn;0.49%* | 28.49%&plusmn;2.69% |   85.09%&plusmn;0.88%* |
-| Test results |  48.80%&plusmn;3.16%* |    63.64%&plusmn;0.71%* | 30.56%&plusmn;3.86% |   85.27%&plusmn;0.91%* |
+| Val results |  51.25%&plusmn;2.52%* |    63.89%&plusmn;0.49%* | 28.49%&plusmn;2.69% |   87.50%&plusmn;0.44%* |
+| Test results |  48.80%&plusmn;3.16%* |    63.64%&plusmn;0.71%* | 30.56%&plusmn;3.86% |   87.65%&plusmn;0.44%* |
 
 \* State-of-the-art results; evaluation metrics are Hits@100, Hits@50, Hits@20 and MRR, respectively. For ogbl-collab, we have switched to the new [rule](https://ogb.stanford.edu/docs/leader_rules/), where after all hyperparameters are determined on the validation set, we include validation edges in the training graph and retrain to report the test performance.
 
@@ -54,9 +54,9 @@ For the above three datasets, append "--runs 10" to do experiments for 10 times 
 
 ### ogbl-citation
 
-    python seal_link_pred.py --dataset ogbl-citation --num_hops 2 --use_feature --use_edge_weight --eval_steps 10 --epochs 10 --dynamic_train --dynamic_val --dynamic_test --train_percent 2 --val_percent 1 --test_percent 1 
+    python seal_link_pred.py --dataset ogbl-citation --num_hops 1 --use_feature --use_edge_weight --eval_steps 1 --epochs 10 --dynamic_train --dynamic_val --dynamic_test --train_percent 2 --val_percent 1 --test_percent 1
 
-Because this dataset uses mean reciprocal rank (MRR) as the metric where each positive testing link is ranked against 1000 random negative ones, it requires extracting 1001 enclosing subgraphs for *every* testing link. This is very time consuming. Thus, the above command uses "--val_percent 1" and "--test_percent 1" to only evaluate on 1% of validation and test data to get an efficient unbiased estimate of the true MRR. To get the true MRR, please change them to "--val_percent 100" and "test_percent 100" or simply remove them. Also, because this dataset is expensive to evaluate, for the leaderboard results, we first train 10 models without evaluation in parallel, and then evaluate all of them together using the "--test_multiple_models" option. This option enables evaluating multiple pretrained models together with a single subgraph extraction process for each link, thus avoiding extracting subgraphs for testing links repeatedly for 10 times. You need to specify your pretrained model paths in the code. 
+Because this dataset uses mean reciprocal rank (MRR) as the metric where each positive testing link is ranked against 1000 random negative ones, it requires extracting 1001 enclosing subgraphs for *every* testing link. This is very time consuming. Thus, the above command uses "--val_percent 1" and "--test_percent 1" to only evaluate on 1% of validation and test data to get an efficient unbiased estimate of the true MRR. To get the true MRR, please change them to "--val_percent 100" and "test_percent 100" or simply remove them. Also, because this dataset is expensive to evaluate, we first train 10 models with 1% validation data in parallel, record the best epoch's model from each run, and then evaluate all 10 best models together using the "--test_multiple_models --val_percent 100 --test_percent 100" option. This option enables evaluating multiple pretrained models together with a single subgraph extraction process for each link, thus avoiding extracting subgraphs for testing links repeatedly for 10 times. You need to specify your pretrained model paths in the code.
 
 ### Cora
 
