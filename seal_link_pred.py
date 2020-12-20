@@ -656,9 +656,9 @@ for run in range(args.runs):
 
             if epoch % args.log_steps == 0:
                 model_name = os.path.join(
-                    args.res_dir, 'model_checkpoint{}.pth'.format(epoch))
+                    args.res_dir, 'run{}_model_checkpoint{}.pth'.format(run, epoch))
                 optimizer_name = os.path.join(
-                    args.res_dir, 'optimizer_checkpoint{}.pth'.format(epoch))
+                    args.res_dir, 'run{}_optimizer_checkpoint{}.pth'.format(run, epoch))
                 torch.save(model.state_dict(), model_name)
                 torch.save(optimizer.state_dict(), optimizer_name)
 
