@@ -46,6 +46,8 @@ Usages
 
     python seal_link_pred.py --dataset ogbl-collab --num_hops 1 --use_feature --train_percent 10 --use_valedges_as_input
 
+According to OGB, this dataset allows including validation links in training when all the hyperparameters are finalized using the validation set. Thus, you should first tune your hyperparameters without "--use_valedges_as_input", and then append "--use_valedges_as_input" to your final command when all hyperparameters are determined. See [issue](https://github.com/snap-stanford/ogb/issues/84).
+
 ### ogbl-ddi
 
     python seal_link_pred.py --dataset ogbl-ddi --num_hops 1 --ratio_per_hop 0.2 --use_edge_weight --eval_steps 1 --epochs 10 --dynamic_val --dynamic_test --train_percent 1 
