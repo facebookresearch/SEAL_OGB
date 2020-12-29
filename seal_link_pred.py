@@ -600,11 +600,11 @@ for run in range(args.runs):
     if args.continue_from is not None:
         model.load_state_dict(
             torch.load(os.path.join(args.res_dir, 
-                'model_checkpoint{}.pth'.format(args.continue_from)))
+                'run{}_model_checkpoint{}.pth'.format(run, args.continue_from)))
         )
         optimizer.load_state_dict(
             torch.load(os.path.join(args.res_dir, 
-                'optimizer_checkpoint{}.pth'.format(args.continue_from)))
+                'run{}_optimizer_checkpoint{}.pth'.format(run, args.continue_from)))
         )
         start_epoch = args.continue_from + 1
         args.epochs -= args.continue_from
