@@ -101,14 +101,15 @@ def drnl_node_labeling(adj, src, dst):
 
 
 def de_node_labeling(adj, src, dst, max_dist=3):
-    # Distance Encoding.
+    # Distance Encoding. See "Li et. al., Distance Encoding: Design Provably More 
+    # Powerful Neural Networks for Graph Representation Learning."
     src, dst = (dst, src) if src > dst else (src, dst)
 
     dist = shortest_path(adj, directed=False, unweighted=True, indices=[src, dst])
     dist = torch.from_numpy(dist)
 
-    dist[torch.isnan(dist)] = max_dist
     dist[dist > max_dist] = max_dist
+    dist[torch.isnan(dist)] = max_dist + 1
 
     return dist.to(torch.long).t()
 
