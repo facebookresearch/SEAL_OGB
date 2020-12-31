@@ -399,7 +399,7 @@ else:
     data = dataset[0]
     data.edge_index = split_edge['train']['edge'].t()
 
-if args.dataset == 'ogbl-citation':
+if args.dataset.startswith('ogbl-citation'):
     args.eval_metric = 'mrr'
     directed = True
 elif args.dataset.startswith('ogbl'):
