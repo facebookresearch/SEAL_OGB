@@ -71,7 +71,7 @@ def k_hop_subgraph(src, dst, num_hops, A, sample_ratio=1.0,
 
 
 def drnl_node_labeling(adj, src, dst):
-    # Double-radius node labeling (DRNL).
+    # Double Radius Node Labeling (DRNL).
     src, dst = (dst, src) if src > dst else (src, dst)
 
     idx = list(range(src)) + list(range(src + 1, adj.shape[0]))
@@ -114,6 +114,32 @@ def de_node_labeling(adj, src, dst, max_dist=3):
     return dist.to(torch.long).t()
 
 
+def de_plus_node_labeling(adj, src, dst, max_dist=100):
+    # Distance Encoding Plus. When computing distance to src, temporarily mask dst;
+    # when computing distance to dst, temporarily mask src. Essentially the same as DRNL.
+    src, dst = (dst, src) if src > dst else (src, dst)
+
+    idx = list(range(src)) + list(range(src + 1, adj.shape[0]))
+    adj_wo_src = adj[idx, :][:, idx]
+
+    idx = list(range(dst)) + list(range(dst + 1, adj.shape[0]))
+    adj_wo_dst = adj[idx, :][:, idx]
+
+    dist2src = shortest_path(adj_wo_dst, directed=False, unweighted=True, indices=src)
+    dist2src = np.insert(dist2src, dst, 0, axis=0)
+    dist2src = torch.from_numpy(dist2src)
+
+    dist2dst = shortest_path(adj_wo_src, directed=False, unweighted=True, indices=dst-1)
+    dist2dst = np.insert(dist2dst, src, 0, axis=0)
+    dist2dst = torch.from_numpy(dist2dst)
+
+    dist = torch.cat([dist2src.view(-1, 1), dist2dst.view(-1, 1)], 1)
+    dist[dist > max_dist] = max_dist
+    dist[torch.isnan(dist)] = max_dist + 1
+
+    return dist.to(torch.long)
+
+
 def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl'):
     # Construct a pytorch_geometric graph from a scipy csr adjacency matrix.
     u, v, r = ssp.find(adj)
@@ -125,14 +151,16 @@ def construct_pyg_graph(node_ids, adj, dists, node_features, y, node_label='drnl
     edge_index = torch.stack([u, v], 0)
     edge_weight = r.to(torch.float)
     y = torch.tensor([y])
-    if node_label == 'drnl':
+    if node_label == 'drnl':  # DRNL
         z = drnl_node_labeling(adj, 0, 1)
-    elif node_label == 'hop':
+    elif node_label == 'hop':  # mininum distance to src and dst
         z = torch.tensor(dists)
-    elif node_label == 'simple':
+    elif node_label == 'zo':  # zero-one labeling trick
         z = (torch.tensor(dists)==0).to(torch.long)
-    elif node_label == 'de':
+    elif node_label == 'de':  # distance encoding
         z = de_node_labeling(adj, 0, 1)
+    elif node_label == 'de+':
+        z = de_plus_node_labeling(adj, 0, 1)
     elif node_label == 'degree':  # this is technically not a valid labeling trick
         z = torch.tensor(adj.sum(axis=0)).squeeze(0)
         z[z>100] = 100  # limit the maximum label to 100
