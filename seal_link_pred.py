@@ -664,12 +664,14 @@ for run in range(args.runs):
 
                 for key, result in results.items():
                     valid_res, test_res = result
+                    to_print = (f'Run: {run + 1:02d}, Epoch: {epoch:02d}, ' +
+                                f'Loss: {loss:.4f}, Valid: {100 * valid_res:.2f}%, ' +
+                                f'Test: {100 * test_res:.2f}%')
                     print(key)
-                    print(f'Run: {run + 1:02d}, '
-                          f'Epoch: {epoch:02d}, '
-                          f'Loss: {loss:.4f}, '
-                          f'Valid: {100 * valid_res:.2f}%, '
-                          f'Test: {100 * test_res:.2f}%')
+                    print(to_print)
+                    with open(log_file, 'a') as f:
+                        print(key, file=f)
+                        print(to_print, file=f)
 
     for key in loggers.keys():
         print(key)
