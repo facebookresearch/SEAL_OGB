@@ -26,11 +26,11 @@ The original paper of SEAL is:
 Requirements
 ------------
 
-Latest tested combination: Python 3.8.5 + PyTorch 1.6.0 + PyTorch_Geometric 1.6.1 + OGB 1.2.4.
+Latest tested combination: Python 3.8.5 + PyTorch 1.6.0 + PyTorch\_Geometric 1.6.1 + OGB 1.2.4.
 
 Install [PyTorch](https://pytorch.org/)
 
-Install [PyTorch_Geometric](https://rusty1s.github.io/pytorch_geometric/build/html/notes/installation.html)
+Install [PyTorch\_Geometric](https://rusty1s.github.io/pytorch_geometric/build/html/notes/installation.html)
 
 Install [OGB](https://ogb.stanford.edu/docs/home/)
 
