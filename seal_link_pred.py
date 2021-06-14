@@ -309,6 +309,8 @@ def evaluate_auc(val_pred, val_true, test_pred, test_true):
 # Data settings
 parser = argparse.ArgumentParser(description='OGBL (SEAL)')
 parser.add_argument('--dataset', type=str, default='ogbl-collab')
+parser.add_argument('--fast_split', action='store_true', 
+                    help="for large custom datasets (not OGB), do a fast data split")
 # GNN settings
 parser.add_argument('--model', type=str, default='DGCNN')
 parser.add_argument('--sortpool_k', type=float, default=0.6)
@@ -395,7 +397,7 @@ if args.dataset.startswith('ogbl'):
 else:
     path = osp.join('dataset', args.dataset)
     dataset = Planetoid(path, args.dataset)
-    split_edge = do_edge_split(dataset)
+    split_edge = do_edge_split(dataset, args.fast_split)
     data = dataset[0]
     data.edge_index = split_edge['train']['edge'].t()
 

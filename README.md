@@ -75,6 +75,8 @@ Because this dataset uses mean reciprocal rank (MRR) as the evaluation metric wh
 
 For all datasets, if you specify "--dynamic_train", the enclosing subgraphs of the training links will be extracted on the fly instead of preprocessing and saving to disk. Similarly for "--dynamic_val" and "--dynamic_test". You can increase "--num_workers" to accelerate the dynamic subgraph extraction process.
 
+If your dataset is large, using the default train/val/test split function might result in OOM. You can add "--fast_split" in this case to do a fast split, which cannot guarantee edges (i, j) and (j, i) won't both appear in the negative links but has a better scalability.
+
 Other labeling tricks
 ---------------------
 
