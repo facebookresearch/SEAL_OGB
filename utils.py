@@ -206,7 +206,7 @@ def do_edge_split(dataset, fast_split=False, val_ratio=0.05, test_ratio=0.1):
         row, col = row[mask], col[mask]
         n_v = int(math.floor(val_ratio * row.size(0)))
         n_t = int(math.floor(test_ratio * row.size(0)))
-		# Positive edges.
+        # Positive edges.
         perm = torch.randperm(row.size(0))
         row, col = row[perm], col[perm]
         r, c = row[:n_v], col[:n_v]
@@ -215,7 +215,7 @@ def do_edge_split(dataset, fast_split=False, val_ratio=0.05, test_ratio=0.1):
         data.test_pos_edge_index = torch.stack([r, c], dim=0)
         r, c = row[n_v + n_t:], col[n_v + n_t:]
         data.train_pos_edge_index = torch.stack([r, c], dim=0)
-		# Negative edges (cannot guarantee (i,j) and (j,i) won't both appear)
+        # Negative edges (cannot guarantee (i,j) and (j,i) won't both appear)
         neg_edge_index = negative_sampling(
             data.edge_index, num_nodes=num_nodes,
             num_neg_samples=row.size(0))

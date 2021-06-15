@@ -338,7 +338,8 @@ parser.add_argument('--dynamic_train', action='store_true',
                     help="dynamically extract enclosing subgraphs on the fly")
 parser.add_argument('--dynamic_val', action='store_true')
 parser.add_argument('--dynamic_test', action='store_true')
-parser.add_argument('--num_workers', type=int, default=16)
+parser.add_argument('--num_workers', type=int, default=16, 
+                    help="number of workers for dynamic mode; 0 if not dynamic")
 parser.add_argument('--train_node_embedding', action='store_true', 
                     help="also train free-parameter node embeddings together with GNN")
 parser.add_argument('--pretrained_node_embedding', type=str, default=None, 
@@ -488,6 +489,8 @@ if args.use_heuristic:
 # SEAL.
 path = dataset.root + '_seal{}'.format(args.data_appendix)
 use_coalesce = True if args.dataset == 'ogbl-collab' else False
+if not args.dynamic_train and not args.dynamic_val and not args.dynamic_test:
+    args.num_workers = 0
 
 dataset_class = 'SEALDynamicDataset' if args.dynamic_train else 'SEALDataset'
 train_dataset = eval(dataset_class)(
