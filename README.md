@@ -12,8 +12,8 @@ This repository reimplements SEAL with the PyTorch-Geometric library, and tests 
 
 |              | ogbl-ppa | ogbl-collab | ogbl-ddi | ogbl-citation2 |
 |--------------|---------------------|-----------------------|--------------------|---------------------|
-| Val results |  51.25%&plusmn;2.52%* |    63.89%&plusmn;0.49%* | 28.49%&plusmn;2.69% |   87.57%&plusmn;0.31%* |
-| Test results |  48.80%&plusmn;3.16%* |    63.64%&plusmn;0.71%* | 30.56%&plusmn;3.86% |   87.67%&plusmn;0.32%* |
+| Val results |  51.25%&plusmn;2.52%* |    64.95%&plusmn;0.43%* | 28.49%&plusmn;2.69% |   87.57%&plusmn;0.31%* |
+| Test results |  48.80%&plusmn;3.16%* |    64.74%&plusmn;0.43%* | 30.56%&plusmn;3.86% |   87.67%&plusmn;0.32%* |
 
 \* State-of-the-art results; evaluation metrics are Hits@100, Hits@50, Hits@20 and MRR, respectively. For ogbl-collab, we have switched to the new [rule](https://ogb.stanford.edu/docs/leader_rules/), where after all hyperparameters are determined on the validation set, we include validation edges in the training graph and retrain to report the test performance. For ogbl-citation2, it is an updated version of the deprecated ogbl-citation.
 
@@ -45,7 +45,7 @@ Usages
 
 ### ogbl-collab
 
-    python seal_link_pred.py --dataset ogbl-collab --num_hops 1 --use_feature --train_percent 10 --use_valedges_as_input
+    python seal_link_pred.py --dataset ogbl-collab --num_hops 1 --train_percent 15 --hidden_channels 256 --use_valedges_as_input
 
 According to OGB, this dataset allows including validation links in training when all the hyperparameters are finalized using the validation set. Thus, you should first tune your hyperparameters without "--use_valedges_as_input", and then append "--use_valedges_as_input" to your final command when all the hyperparameters are determined. See [issue](https://github.com/snap-stanford/ogb/issues/84).
 
