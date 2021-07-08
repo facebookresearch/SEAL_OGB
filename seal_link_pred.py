@@ -140,6 +140,9 @@ class SEALDynamicDataset(Dataset):
     def __len__(self):
         return len(self.links)
 
+    def len(self):
+        return self.__len__()
+
     def get(self, idx):
         src, dst = self.links[idx]
         y = self.labels[idx]
