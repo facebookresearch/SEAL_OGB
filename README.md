@@ -4,9 +4,9 @@ SEAL\_OGB -- An Implementation of SEAL for OGB Link Prediction Tasks
 About
 -----
 This repository supports the following paper:
-> M. Zhang, P. Li, Y. Xia, K. Wang, and L. Jin, Revisiting Graph Neural Networks for Link Prediction. [\[PDF\]](https://arxiv.org/pdf/2010.16103.pdf)
+> M. Zhang, P. Li, Y. Xia, K. Wang, and L. Jin, Labeling Trick: A Theory of Using Graph Neural Networks for Multi-Node Representation Learning. [\[PDF\]](https://arxiv.org/pdf/2010.16103.pdf)
 
-SEAL is a GNN-based link prediction method. It first extracts a k-hop enclosing subgraph for each target link, then applies a Double Radius Node Labeling (DRNL) scheme to give each node an integer label as its additional feature. Finally, these labeled enclosing subgraphs are fed to a graph neural network to predict link existences.
+SEAL is a GNN-based link prediction method. It first extracts a k-hop enclosing subgraph for each target link, then applies a labeling trick named Double Radius Node Labeling (DRNL) to give each node an integer label as its additional feature. Finally, these labeled enclosing subgraphs are fed to a graph neural network to predict link existences.
 
 This repository reimplements SEAL with the PyTorch-Geometric library, and tests SEAL on the Open Graph Benchmark (OGB) datasets. SEAL ranked 1st place on 3 out of 4 link prediction datasets in the [OGB Leaderboard](https://ogb.stanford.edu/docs/leader_linkprop/) at the time of submission. It additionally supports Planetoid like datasets, such as Cora, CiteSeer and PubMed, where random 0.85/0.05/0.1 split and AUC metric are used. Using custom datasets is also easy by replacing the Planetoid dataset with your own.
 
@@ -22,6 +22,7 @@ The original implementation of SEAL is [here](https://github.com/muhanzhang/SEAL
 The original paper of SEAL is:
 > M. Zhang and Y. Chen, Link Prediction Based on Graph Neural Networks, Advances in Neural Information Processing Systems (NIPS-18). [\[PDF\]](https://arxiv.org/pdf/1802.09691.pdf)
 
+This repository also implements some other labeling tricks, such as Distance Encoding (DE) and Zero-One (ZO), and supports combining labeling tricks with different GNNs, including GCN, GraphSAGE and GIN.
 
 Requirements
 ------------
@@ -99,13 +100,12 @@ Reference
 
 If you find the code useful, please cite our papers.
 
-    @misc{zhang2020revisiting,
-      title={Revisiting Graph Neural Networks for Link Prediction},
-      author={Muhan Zhang and Pan Li and Yinglong Xia and Kai Wang and Long Jin},
-      year={2020},
-      eprint={2010.16103},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
+	@article{zhang2021labeling,
+      title={Labeling Trick: A Theory of Using Graph Neural Networks for Multi-Node Representation Learning},
+      author={Zhang, Muhan and Li, Pan and Xia, Yinglong and Wang, Kai and Jin, Long},
+      journal={Advances in Neural Information Processing Systems},
+      volume={34},
+      year={2021}
     }
 
     @inproceedings{zhang2018link,
