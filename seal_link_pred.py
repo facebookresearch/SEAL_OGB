@@ -27,6 +27,8 @@ from torch_geometric.utils import to_networkx, to_undirected
 from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 
 import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 from scipy.sparse import SparseEfficiencyWarning
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
 
@@ -413,6 +415,11 @@ if args.dataset.startswith('ogbl'):
     dataset = PygLinkPropPredDataset(name=args.dataset)
     split_edge = dataset.get_edge_split()
     data = dataset[0]
+    if args.dataset.startswith('ogbl-vessel'):
+        # normalize node features
+        data.x[:, 0] = torch.nn.functional.normalize(data.x[:, 0], dim=0)
+        data.x[:, 1] = torch.nn.functional.normalize(data.x[:, 1], dim=0)
+        data.x[:, 2] = torch.nn.functional.normalize(data.x[:, 2], dim=0)
 else:
     path = osp.join('dataset', args.dataset)
     dataset = Planetoid(path, args.dataset)
