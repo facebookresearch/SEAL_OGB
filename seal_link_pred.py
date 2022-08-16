@@ -209,7 +209,7 @@ def test():
     elif args.eval_metric == 'mrr':
         results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'rocauc':
-        results = evaluate_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
+        results = evaluate_roc_auc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'auc':
         results = evaluate_auc(val_pred, val_true, test_pred, test_true)
 
@@ -311,7 +311,7 @@ def evaluate_auc(val_pred, val_true, test_pred, test_true):
     return results
         
 
-def evaluate roc_auc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
+def evaluate_roc_auc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
     valid_rocauc = evaluator.eval({
         'y_pred_pos': pos_val_pred,
         'y_pred_neg': neg_val_pred,
@@ -322,7 +322,7 @@ def evaluate roc_auc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
             'y_pred_neg': neg_test_pred,
         })[f'rocauc']
 
-    return train_rocauc, valid_rocauc, test_rocauc
+    return valid_rocauc, test_rocauc
 
 # Data settings
 parser = argparse.ArgumentParser(description='OGBL (SEAL)')
