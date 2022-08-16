@@ -236,13 +236,17 @@ def do_edge_split(dataset, fast_split=False, val_ratio=0.05, test_ratio=0.1):
 def get_pos_neg_edges(split, split_edge, edge_index, num_nodes, percent=100):
     if 'edge' in split_edge['train']:
         pos_edge = split_edge[split]['edge'].t()
-        if split == 'train':
+
+        if 'edge_neg' in split_edge['train']:
+            # use presampled  negative training edges for ogbl-vessel
+            neg_edge = split_edge[split]['edge_neg'].t()
+
+        else:
             new_edge_index, _ = add_self_loops(edge_index)
             neg_edge = negative_sampling(
                 new_edge_index, num_nodes=num_nodes,
                 num_neg_samples=pos_edge.size(1))
-        else:
-            neg_edge = split_edge[split]['edge_neg'].t()
+
         # subsample for pos_edge
         np.random.seed(123)
         num_pos = pos_edge.size(1)
