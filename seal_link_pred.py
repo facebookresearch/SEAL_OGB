@@ -311,6 +311,19 @@ def evaluate_auc(val_pred, val_true, test_pred, test_true):
     return results
         
 
+def evaluate roc_auc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
+    valid_rocauc = evaluator.eval({
+        'y_pred_pos': pos_val_pred,
+        'y_pred_neg': neg_val_pred,
+        })[f'rocauc']
+
+    test_rocauc = evaluator.eval({
+            'y_pred_pos': pos_test_pred,
+            'y_pred_neg': neg_test_pred,
+        })[f'rocauc']
+
+    return train_rocauc, valid_rocauc, test_rocauc
+
 # Data settings
 parser = argparse.ArgumentParser(description='OGBL (SEAL)')
 parser.add_argument('--dataset', type=str, default='ogbl-collab')
@@ -410,6 +423,9 @@ else:
 if args.dataset.startswith('ogbl-citation'):
     args.eval_metric = 'mrr'
     directed = True
+elif args.dataset.startswith('ogbl-vessel'):
+    args.eval_metric = 'rocauc'
+    directed = False
 elif args.dataset.startswith('ogbl'):
     args.eval_metric = 'hits'
     directed = False
