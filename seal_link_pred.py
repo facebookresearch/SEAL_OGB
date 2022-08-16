@@ -261,6 +261,10 @@ def test_multiple_models(models):
         elif args.eval_metric == 'mrr':
             Results.append(evaluate_mrr(pos_val_pred[i], neg_val_pred[i], 
                                         pos_test_pred[i], neg_test_pred[i]))
+        elif args.eval_metric == 'rocauc':
+            Results.append(evaluate_rocauc(pos_val_pred[i], neg_val_pred[i], 
+                                        pos_test_pred[i], neg_test_pred[i]))
+
         elif args.eval_metric == 'auc':
             Results.append(evaluate_auc(val_pred[i], val_true[i], 
                                         test_pred[i], test_pred[i]))
@@ -283,7 +287,6 @@ def evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
         results[f'Hits@{K}'] = (valid_hits, test_hits)
 
     return results
-        
 
 def evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
     neg_val_pred = neg_val_pred.view(pos_val_pred.shape[0], -1)
@@ -300,7 +303,6 @@ def evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
     })['mrr_list'].mean().item()
 
     results['MRR'] = (valid_mrr, test_mrr)
-    
     return results
 
 
@@ -311,7 +313,6 @@ def evaluate_auc(val_pred, val_true, test_pred, test_true):
     results['AUC'] = (valid_auc, test_auc)
 
     return results
-        
 
 def evaluate_roc_auc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
     valid_rocauc = evaluator.eval({
@@ -324,7 +325,9 @@ def evaluate_roc_auc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
             'y_pred_neg': neg_test_pred,
         })[f'rocauc']
 
-    return valid_rocauc, test_rocauc
+    results = {}
+    results['rocauc'] = (valid_rocauc, test_rocauc)
+    return results
 
 # Data settings
 parser = argparse.ArgumentParser(description='OGBL (SEAL)')
@@ -460,6 +463,11 @@ elif args.eval_metric == 'mrr':
     loggers = {
         'MRR': Logger(args.runs, args),
     }
+elif args.eval_metric == 'rocauc':
+    loggers = {
+        'rocauc': Logger(args.runs, args),
+    }
+
 elif args.eval_metric == 'auc':
     loggers = {
         'AUC': Logger(args.runs, args),
@@ -493,6 +501,8 @@ if args.use_heuristic:
         results = evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'mrr':
         results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
+    elif args.eval_metric == 'rocauc':
+        results = evaluate_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'auc':
         val_pred = torch.cat([pos_val_pred, neg_val_pred])
         val_true = torch.cat([torch.ones(pos_val_pred.size(0), dtype=int), 
