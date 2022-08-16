@@ -211,7 +211,7 @@ def test():
     elif args.eval_metric == 'mrr':
         results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'rocauc':
-        results = evaluate_roc_auc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
+        results = evaluate_ogb_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'auc':
         results = evaluate_auc(val_pred, val_true, test_pred, test_true)
 
@@ -262,7 +262,7 @@ def test_multiple_models(models):
             Results.append(evaluate_mrr(pos_val_pred[i], neg_val_pred[i], 
                                         pos_test_pred[i], neg_test_pred[i]))
         elif args.eval_metric == 'rocauc':
-            Results.append(evaluate_rocauc(pos_val_pred[i], neg_val_pred[i], 
+            Results.append(evaluate_ogb_rocauc(pos_val_pred[i], neg_val_pred[i], 
                                         pos_test_pred[i], neg_test_pred[i]))
 
         elif args.eval_metric == 'auc':
@@ -314,7 +314,7 @@ def evaluate_auc(val_pred, val_true, test_pred, test_true):
 
     return results
 
-def evaluate_roc_auc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
+def evaluate_ogb_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
     valid_rocauc = evaluator.eval({
         'y_pred_pos': pos_val_pred,
         'y_pred_neg': neg_val_pred,
@@ -502,7 +502,7 @@ if args.use_heuristic:
     elif args.eval_metric == 'mrr':
         results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'rocauc':
-        results = evaluate_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
+        results = evaluate_ogb_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'auc':
         val_pred = torch.cat([pos_val_pred, neg_val_pred])
         val_true = torch.cat([torch.ones(pos_val_pred.size(0), dtype=int), 
