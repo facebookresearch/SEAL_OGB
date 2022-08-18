@@ -27,6 +27,8 @@ from torch_geometric.utils import to_networkx, to_undirected
 from ogb.linkproppred import PygLinkPropPredDataset, Evaluator
 
 import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 from scipy.sparse import SparseEfficiencyWarning
 warnings.simplefilter('ignore', SparseEfficiencyWarning)
 
@@ -208,6 +210,8 @@ def test():
         results = evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'mrr':
         results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
+    elif args.eval_metric == 'rocauc':
+        results = evaluate_ogb_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'auc':
         results = evaluate_auc(val_pred, val_true, test_pred, test_true)
 
@@ -257,6 +261,10 @@ def test_multiple_models(models):
         elif args.eval_metric == 'mrr':
             Results.append(evaluate_mrr(pos_val_pred[i], neg_val_pred[i], 
                                         pos_test_pred[i], neg_test_pred[i]))
+        elif args.eval_metric == 'rocauc':
+            Results.append(evaluate_ogb_rocauc(pos_val_pred[i], neg_val_pred[i], 
+                                        pos_test_pred[i], neg_test_pred[i]))
+
         elif args.eval_metric == 'auc':
             Results.append(evaluate_auc(val_pred[i], val_true[i], 
                                         test_pred[i], test_pred[i]))
@@ -279,7 +287,6 @@ def evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
         results[f'Hits@{K}'] = (valid_hits, test_hits)
 
     return results
-        
 
 def evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
     neg_val_pred = neg_val_pred.view(pos_val_pred.shape[0], -1)
@@ -296,7 +303,6 @@ def evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
     })['mrr_list'].mean().item()
 
     results['MRR'] = (valid_mrr, test_mrr)
-    
     return results
 
 
@@ -307,7 +313,21 @@ def evaluate_auc(val_pred, val_true, test_pred, test_true):
     results['AUC'] = (valid_auc, test_auc)
 
     return results
-        
+
+def evaluate_ogb_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred):
+    valid_rocauc = evaluator.eval({
+        'y_pred_pos': pos_val_pred,
+        'y_pred_neg': neg_val_pred,
+        })[f'rocauc']
+
+    test_rocauc = evaluator.eval({
+            'y_pred_pos': pos_test_pred,
+            'y_pred_neg': neg_test_pred,
+        })[f'rocauc']
+
+    results = {}
+    results['rocauc'] = (valid_rocauc, test_rocauc)
+    return results
 
 # Data settings
 parser = argparse.ArgumentParser(description='OGBL (SEAL)')
@@ -398,6 +418,11 @@ if args.dataset.startswith('ogbl'):
     dataset = PygLinkPropPredDataset(name=args.dataset)
     split_edge = dataset.get_edge_split()
     data = dataset[0]
+    if args.dataset.startswith('ogbl-vessel'):
+        # normalize node features
+        data.x[:, 0] = torch.nn.functional.normalize(data.x[:, 0], dim=0)
+        data.x[:, 1] = torch.nn.functional.normalize(data.x[:, 1], dim=0)
+        data.x[:, 2] = torch.nn.functional.normalize(data.x[:, 2], dim=0)
 else:
     path = osp.join('dataset', args.dataset)
     dataset = Planetoid(path, args.dataset)
@@ -408,6 +433,9 @@ else:
 if args.dataset.startswith('ogbl-citation'):
     args.eval_metric = 'mrr'
     directed = True
+elif args.dataset.startswith('ogbl-vessel'):
+    args.eval_metric = 'rocauc'
+    directed = False
 elif args.dataset.startswith('ogbl'):
     args.eval_metric = 'hits'
     directed = False
@@ -435,6 +463,11 @@ elif args.eval_metric == 'mrr':
     loggers = {
         'MRR': Logger(args.runs, args),
     }
+elif args.eval_metric == 'rocauc':
+    loggers = {
+        'rocauc': Logger(args.runs, args),
+    }
+
 elif args.eval_metric == 'auc':
     loggers = {
         'AUC': Logger(args.runs, args),
@@ -468,6 +501,8 @@ if args.use_heuristic:
         results = evaluate_hits(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'mrr':
         results = evaluate_mrr(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
+    elif args.eval_metric == 'rocauc':
+        results = evaluate_ogb_rocauc(pos_val_pred, neg_val_pred, pos_test_pred, neg_test_pred)
     elif args.eval_metric == 'auc':
         val_pred = torch.cat([pos_val_pred, neg_val_pred])
         val_true = torch.cat([torch.ones(pos_val_pred.size(0), dtype=int), 
