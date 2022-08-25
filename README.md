@@ -10,10 +10,10 @@ SEAL is a GNN-based link prediction method. It first extracts a k-hop enclosing 
 
 This repository reimplements SEAL with the PyTorch-Geometric library, and tests SEAL on the Open Graph Benchmark (OGB) datasets. SEAL ranked 1st place on 3 out of 4 link prediction datasets in the [OGB Leaderboard](https://ogb.stanford.edu/docs/leader_linkprop/) at the time of submission. It additionally supports Planetoid like datasets, such as Cora, CiteSeer and PubMed, where random 0.85/0.05/0.1 split and AUC metric are used. Using custom datasets is also easy by replacing the Planetoid dataset with your own.
 
-|              | ogbl-ppa | ogbl-collab | ogbl-ddi | ogbl-citation2 |
-|--------------|---------------------|-----------------------|--------------------|---------------------|
-| Val results |  51.25%&plusmn;2.52%* |    64.95%&plusmn;0.43%* | 28.49%&plusmn;2.69% |   87.57%&plusmn;0.31%* |
-| Test results |  48.80%&plusmn;3.16%* |    64.74%&plusmn;0.43%* | 30.56%&plusmn;3.86% |   87.67%&plusmn;0.32%* |
+|              | ogbl-ppa | ogbl-collab | ogbl-ddi | ogbl-vessel | ogbl-citation2 | 
+|--------------|---------------------|-----------------------|-----------------------|--------------------|---------------------|
+| Val results |  51.25%&plusmn;2.52%* |    64.95%&plusmn;0.43%* | 28.49%&plusmn;2.69% |   80.53%&plusmn;0.22%* | 87.57%&plusmn;0.31%* |
+| Test results |  48.80%&plusmn;3.16%* |    64.74%&plusmn;0.43%* | 30.56%&plusmn;3.86% |   80.50%&plusmn;0.21%* | 87.67%&plusmn;0.32%* |
 
 \* State-of-the-art results; evaluation metrics are Hits@100, Hits@50, Hits@20 and MRR, respectively. For ogbl-collab, we have switched to the new [rule](https://ogb.stanford.edu/docs/leader_rules/), where after all hyperparameters are determined on the validation set, we include validation edges in the training graph and retrain to report the test performance. For ogbl-citation2, it is an updated version of the deprecated ogbl-citation.
 
@@ -28,6 +28,7 @@ Requirements
 ------------
 
 Latest tested combination: Python 3.8.5 + PyTorch 1.6.0 + PyTorch\_Geometric 1.6.1 + OGB 1.2.4.
+For ogbl-vessel, we tested SEAL in the following: Python 3.8.10 + PyTorch 1.12.1 + PyTorch\_Geometric 2.0.4 + OGB 1.3.4.
 
 Install [PyTorch](https://pytorch.org/)
 
@@ -56,11 +57,16 @@ According to OGB, this dataset allows including validation links in training whe
 
 For the above three datasets, append "--runs 10" to do experiments for 10 times and get the average results.
 
+### ogbl-vessel
+
+    python seal_link_pred.py --dataset ogbl-vessel --use_feature --num_hops 1 --num_layers 2 --lr 0.001 
+
 ### ogbl-citation2
 
     python seal_link_pred.py --dataset ogbl-citation2 --num_hops 1 --use_feature --use_edge_weight --eval_steps 1 --epochs 10 --dynamic_train --dynamic_val --dynamic_test --train_percent 2 --val_percent 1 --test_percent 1
 
 Because this dataset uses mean reciprocal rank (MRR) as the evaluation metric where each positive testing link is ranked against 1000 random negative ones, it requires extracting 1001 enclosing subgraphs for *every* testing link. This is very time consuming. Thus, the above command uses "--val_percent 1" and "--test_percent 1" to only evaluate on 1% of validation and test data to get a fast unbiased estimate of the true MRR. To get the true MRR, please change them to "--val_percent 100" and "test_percent 100". Also, because this dataset is expensive to evaluate, we first train 10 models with 1% validation data in parallel, record the best epoch's model from each run, and then evaluate all 10 best models together using the "--test_multiple_models --val_percent 100 --test_percent 100" option. This option enables evaluating multiple pretrained models together with a single subgraph extraction process for each link, thus avoiding extracting subgraphs for testing links repeatedly for 10 times. You need to specify your pretrained model paths in "seal_link_pred.py".
+
 
 ### Cora
 
