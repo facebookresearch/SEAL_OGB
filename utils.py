@@ -237,7 +237,7 @@ def get_pos_neg_edges(split, split_edge, edge_index, num_nodes, percent=100):
     if 'edge' in split_edge['train']:
         pos_edge = split_edge[split]['edge'].t()
 
-        if 'edge_neg' in split_edge['train']:
+        if 'edge_neg' in split_edge[split]:
             # use presampled  negative training edges for ogbl-vessel
             neg_edge = split_edge[split]['edge_neg'].t()
 
