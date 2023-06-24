@@ -449,7 +449,7 @@ if args.use_valedges_as_input:
         val_edge_index = to_undirected(val_edge_index)
     data.edge_index = torch.cat([data.edge_index, val_edge_index], dim=-1)
     if 'edge_weight' in data:
-        val_edge_weight = torch.ones([data.edge_index.size(1), 1], dtype=int)
+        val_edge_weight = torch.ones([val_edge_index.size(1), 1], dtype=int)
         data.edge_weight = torch.cat([data.edge_weight, val_edge_weight], 0)
 
 if args.dataset.startswith('ogbl'):
